@@ -66,7 +66,7 @@ const OtpPage = ()=>{
                         />
                     </div>
                     <div className="input-wrapper flex itemx-center gap-2">
-                        <button type="submit" className={`bg-main flex items-center justify-center gap-2 ${loading?"cursor-none":""} text-white rounded-sm w-full shadow-md p-2`}>
+                        <button type="submit" className={`bg-main flex flex-col gap-1 items-center justify-center ${loading?"cursor-none":""} text-white rounded-sm w-full shadow-md p-2`}>
                             Verify Otp
                             {loading&&(<BarLoader size={20} color="white"/>)}
                         </button>

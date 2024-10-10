@@ -26,6 +26,7 @@ const Login = ()=>{
         }catch(err){
             console.log(err);
             toast.error(err.message)
+            setLoading(false)
         }
     }
 
@@ -104,8 +105,8 @@ const Login = ()=>{
                         </Link>
                     </div>
                     <div className="input-wrapper flex itemx-center gap-2">
-                        <button type="submit" className={`bg-main flex items-center justify-center gap-2 ${loading?"cursor-none":""} text-white rounded-sm w-full shadow-md p-2`}>
-                            Login
+                        <button type="submit" className={`bg-main flex flex-col gap-1 items-center justify-center gap-2 ${loading?"cursor-none":""} text-white rounded-sm w-full shadow-md p-2`}>
+                                Login
                             {loading&&(<BarLoader size={20} color="white"/>)}
                         </button>
                         <button type="button" onClick={demoCred} className="bg-blue text-sm p-1 rounded-md shadow-md text-white">use demo credentials</button>

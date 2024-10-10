@@ -3,16 +3,19 @@ import { useForm } from "react-hook-form"
 import toast from "react-hot-toast"
 import { ErrorMessage } from "@hookform/error-message"
 import fetcherInstance from '../../api/axiosUtils'
+import { BarLoader } from "react-spinners"
 import { useNavigate } from "react-router-dom"
 
 const ForgotPassword = ()=>{
     const {handleSubmit,register,formState} = useForm()
     const navigate = useNavigate()
     const [mode,setMode] = useState(0)
+    const [loading,setLoading] = useState(false)
 
     const submitForm = async(data)=>{
         try{
             const axios = fetcherInstance()
+            setLoading(true)
             const response = await axios.post('/user/forgot',data)
             if(response.status==200){
                 localStorage.setItem('verifyToken',response.data.token)
@@ -22,6 +25,8 @@ const ForgotPassword = ()=>{
         }catch(err){
             console.log(err);
             toast.error(err.message)
+        }finally{
+            setLoading(false)
         }
     }
 
@@ -81,7 +86,10 @@ const ForgotPassword = ()=>{
                         </div>
                     )}
                     <div className="input-wrapper">
-                        <button type="submit" className="bg-main text-white rounded-sm w-full shadow-md p-2">Send Otp</button>
+                    <button type="submit" className={`bg-main flex flex-col gap-1 items-center justify-center gap-2 ${loading?"cursor-none":""} text-white rounded-sm w-full shadow-md p-2`}>
+                            Send OTP
+                            {loading&&(<BarLoader size={20} color="white"/>)}
+                        </button>
                     </div>
                 </form>
             </div>

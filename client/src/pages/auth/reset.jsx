@@ -3,11 +3,13 @@ import { useForm } from "react-hook-form"
 import fetcherInstance from '../../api/axiosUtils'
 import toast from "react-hot-toast"
 import { ErrorMessage } from "@hookform/error-message"
+import { BarLoader } from "react-spinners"
 import { useNavigate } from "react-router-dom"
 
 const Reset = ()=>{
     const {handleSubmit,register,formState,setError} = useForm()
     const [showPassword,setShowPassword] = useState(false)
+    const [loading,setLoading] = useState(false)
     const navigate = useNavigate()
 
     const submitForm = async(data)=>{
@@ -18,6 +20,7 @@ const Reset = ()=>{
                 return 
             }
             const axios = fetcherInstance()
+            setLoading(true)
             const response = await axios.post('/user/reset',{password:data.password},{headers:{Authorization:`Bearer ${localStorage.getItem('verifyToken')}`}})
             if(response.status==200){
                 toast.success(response.data.message)
@@ -28,6 +31,8 @@ const Reset = ()=>{
         }catch(err){
             console.log(err);
             toast.error(err.message)
+        }finally{
+            setLoading(false)
         }
     }
 
@@ -63,7 +68,10 @@ const Reset = ()=>{
                         <ErrorMessage render={({message})=><span className="text-red-600 text-xs ps-2 mt-1">{message}</span>} errors={formState.errors} name="cnfrmPassword"/>
                     </div>
                     <div className="input-wrapper">
-                        <button type="submit" className="bg-main text-white rounded-sm w-full shadow-md p-2">Reset Password</button>
+                    <button type="submit" className={`bg-main flex flex-col gap-1 items-center justify-center gap-2 ${loading?"cursor-none":""} text-white rounded-sm w-full shadow-md p-2`}>
+                            Reset Password
+                            {loading&&(<BarLoader size={20} color="white"/>)}
+                    </button>
                     </div>
                 </form>
             </div>

@@ -3,11 +3,13 @@ import { useForm } from "react-hook-form"
 import fetcherInstance from '../../api/axiosUtils'
 import toast from "react-hot-toast"
 import { ErrorMessage } from "@hookform/error-message"
+import { BarLoader } from "react-spinners"
 import { useNavigate } from "react-router-dom"
 
 const Signup = ()=>{
     const {handleSubmit,register,watch,formState,setError} = useForm()
     const navigate = useNavigate()
+    const [loading,setLoading] = useState(false)
     const [showPassword,setShowPassword] = useState(false)
 
     const password = watch('password')
@@ -20,6 +22,7 @@ const Signup = ()=>{
                 setError('cnfrmPassword',{message:"Passwords doesn't match"})
                 return 
             }
+            setLoading(true)
             const response = await axios.post('/user/signup',data,{headers:{Authorization:undefined}})
             if(response.status==201){
                 toast.success(response.data.message)
@@ -29,6 +32,8 @@ const Signup = ()=>{
         }catch(err){
             console.log(err);
             toast.error(err.message)
+        }finally{
+            setLoading(false)
         }
     }
 
@@ -115,7 +120,10 @@ const Signup = ()=>{
                         />
                     </div>
                     <div className="input-wrapper">
-                        <button type="submit" className="bg-main text-white rounded-sm w-full shadow-md p-2">Create Account</button>
+                    <button type="submit" className={`bg-main flex flex-col gap-1 items-center justify-center gap-2 ${loading?"cursor-none":""} text-white rounded-sm w-full shadow-md p-2`}>
+                            Create account
+                            {loading&&(<BarLoader size={20} color="white"/>)}
+                    </button>
                     </div>
                     <div className="input-wrapper">
                         <article className="text-xs text-center">
