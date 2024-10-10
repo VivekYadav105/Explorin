@@ -196,7 +196,7 @@ router.get('/reset/:token',async(req,res,next)=>{
 
 router.post('/dashboard',auth,async(req,res,next)=>{
     try{
-        
+        res.json({message:"Hello from backend"})
     }catch(err){
         next(err)
     }
