@@ -1,6 +1,6 @@
 # Plune Healthcare - Internship Task
 
-This repository contains the project developed during my internship at **Plune Healthcare**. It includes a **React - Vite** frontend and a **Node.js - Express** backend.
+This repository contains the project developed during my internship at **Plune Healthcare**. It includes a **React - Vite** frontend and a **Node.js - Express** backend to demonstrate jwt authentication. 
 
 ## Table of Contents
 
