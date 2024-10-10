@@ -20,7 +20,8 @@ const OtpPage = ()=>{
             }
             setLoading(true)
             const token = `Bearer ${localStorage.getItem('verifyToken')}`
-            const response = await axios.post('http://localhost:5000/user/verifyOtp',{otp},{headers:{Authorization:token}})
+            const backend = import.meta.env.VITE_BACKEND_URI
+            const response = await axios.post(`${backend}/user/verifyOtp`,{otp},{headers:{Authorization:token}})
             if(response.status==200){
                 setLoading(false)
                 toast.success(response.data.message)
