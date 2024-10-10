@@ -30,9 +30,7 @@ app.use(cors());
 app.use("/user", userRouter);
 
 app.get('/',(req,res)=>{
-  console.log(req.headers)
-  console.log(req.get('referer'))
-  return res.send(JSON.stringify(req.get("origin")))
+  return res.send("Plunes task")
 })
 
 app.use(errorHandler)
