@@ -5,6 +5,9 @@ const jwt = require('jsonwebtoken')
 const createMessage = require('../utils/sendMessage')
 const auth = require('../middleware/auth.middleware')
 const { default: mongoose } = require('mongoose')
+const {sendVerificationMail,sendForgotEmail} = require('../utils/sendMail')
+const employeeModel = require('../models/employeeSchema')
+const { parser } = require('../utils/storage')
 
 const router = express.Router()
 
@@ -18,22 +21,26 @@ function generateOtp(length) {
 
 router.post('/login',async(req,res,next)=>{
     try{
-        console.log(req.body)
-        const {userID,mobile,password} = req.body
-        const user = await userModel.findOne({userID,mobile}).lean()
+        const {username,password,mode} = req.body
+        console.log(mode);
+        let user;
+        if(mode=='manager') {
+            user = await userModel.findOne({$or:[{email:username},{username}]}).lean()
+        }
+        else user = await employeeModel.findOne({$or:[{email:username},{username}]}).lean()
+
         if(!user){
             res.statusCode = 404
             throw new Error("Invalid Credentials!!")
         }
-        const hashedPassword = await bcrypt.compare(password,user.password)
-        
-        if(!hashedPassword){
-            res.statusCode = 400
-            throw new Error("Credentials doesn't match")
-        }
-        const {password:userPassword,...userDoc} = user
-        const token = jwt.sign(userDoc,process.env.JWT_SECRET_MAIN,{expiresIn:'1h'})
-        return res.json({message:"User Logged In succssfully",token:token})
+            const hashedPassword = await bcrypt.compare(password,user.password)
+            if(!hashedPassword){
+                res.statusCode = 400
+                throw new Error("Credentials doesn't match")
+            }
+            const {password:userPassword,...userDoc} = user
+            const token = jwt.sign(userDoc,process.env.JWT_SECRET_MAIN,{expiresIn:'1h'})
+            return res.json({message:"User Logged In succssfully",token:token})
     }
     catch(err){
         next(err)
@@ -42,34 +49,21 @@ router.post('/login',async(req,res,next)=>{
 
 router.post('/signup',async(req,res,next)=>{
     try{
-        const {mobile,password,fname,lname,countryCode} = req.body
-        const existingUser = await userModel.findOne({$or:[{mobile}]})
+        const {password,fname,lname,email} = req.body
+        const existingUser = await userModel.findOne({$or:[{email}]})
         console.log(req.body);
         
         let token,otp;
         if(existingUser){
-            if(existingUser.verfied){
-                res.statusCode = 409
-                throw new Error("User alreasy exists")
-            }
-            else{
-                token = jwt.sign({id:existingUser._id},process.env.JWT_SECRET_TEMP,{expiresIn:'10m'})
-                otp = generateOtp(6)
-                existingUser.otp = otp
-                await existingUser.save()
-                await createMessage(existingUser.mobile,`Your one time login is ${otp} and is valid for 10mins`) 
-            }
-            
+            res.statusCode = 409
+            throw new Error("User alreasy exists")
         }else{
             const hashedPassword = await bcrypt.hash(password,10)
-            const [code,country] = countryCode.split(' ')
-            const userId = country + JSON.stringify(Date.now())
-            otp = generateOtp(6)
-            const user = await userModel.create({userId,mobile,password:hashedPassword,fname,lname,otp})
-            token = jwt.sign({id:user._id,mode:'verifyUser'},process.env.JWT_SECRET_TEMP,{expiresIn:'10m'})
-            const res = await createMessage(mobile,`Your one time login is ${otp} and is valid for 10mins`) 
+            token = jwt.sign({fname,lname,password:hashedPassword,email},process.env.JWT_SECRET_TEMP,{expiresIn:'10m'})
+            let name = fname + " " + lname||''
+            await sendVerificationMail(email,name,token)
         }
-        return res.status(201).json({message:`Your otp is ${otp}`,token:token})
+        return res.status(201).json({message:"please check your email for verification link"})
     }
     catch(err){
         next(err)
@@ -78,24 +72,24 @@ router.post('/signup',async(req,res,next)=>{
 
 router.post('/forgot',async(req,res,next)=>{
     try{
-        const {userId,mobile} = req.body
-        const user = await userModel.findOne({$or:[{userId},{mobile}]})
+        const {username} = req.body
+        const user = await userModel.findOne({$or:[{email:username},{username}]})
         if(!user){
             console.log("user not found");
             return res.json({message:"Please check the mobile for the otp code"})
         }
-        const otp = generateOtp(6)
-        user.otp = otp;
-        await user.save()
         const token = jwt.sign({id:user._id,mode:'resetPassword'},process.env.JWT_SECRET_TEMP,{expiresIn:'10m'})
-        return res.json({message:`Your Otp is ${otp}`,token:token})
+        user.token = token;
+        await user.save()
+        await sendForgotEmail(user.email,user.username,token)
+        return res.json({message:`check your email for reset link`,token:token})
     }
     catch(err){
         next(err)
     }
 })
 
-router.post('/verifyOtp',async(req,res,next)=>{
+router.post('/verifyOtp',parser.single('profilePic'),async(req,res,next)=>{
     try{
         if(!req.headers.authorization||!req.headers.authorization.startsWith('Bearer')){
             res.statusCode = 403
@@ -134,10 +128,33 @@ router.post('/verifyOtp',async(req,res,next)=>{
     }
 })
 
-
-router.post('/verifyToken',async(req,res,next)=>{
+router.post('/create',async(req,res,next)=>{
     try{
-        if(!req.headers.authorization||req.headers.authorization.startsWith('Bearer')){
+        if(!req.headers.authorization||!req.headers.authorization.startsWith('Bearer')){
+            res.statusCode = 403
+            throw new Error('Session Expired')
+        }
+        const token = req.headers.authorization.split(' ')[1]
+        console.log("token:",token);
+        const data = jwt.verify(token,process.env.JWT_SECRET_TEMP)
+        const {username,profilePic} = req.body;
+        const existingUser = await userModel.findOne({$or:[{email:username},{username}]})
+        if(existingUser){
+            res.statusCode = 409
+            throw new Error("User alreasy exists or username is taken")
+        }
+        const user = await userModel.create({...data,username,profilePic:''})
+        return res.json({message:"User Created Successfully",user})
+    }catch(err){
+        next(err)
+    }
+})
+
+router.get('/verifyToken',async(req,res,next)=>{
+    try{
+        console.log(req.headers.authorization);
+        
+        if(!req.headers.authorization||!req.headers.authorization.startsWith('Bearer')){
             res.statusCode = 403
             throw new Error("Session Expired")
         }
@@ -146,15 +163,17 @@ router.post('/verifyToken',async(req,res,next)=>{
             res.statusCode = 403
             throw new Error("Session Expired")
         }
-        const verify = jwt.verify(token,process.env.JWT_SECRET_MAIN)
-        if(mongoose.isValidObjectId(verify._id)){
-            return res.json({message:"Valid Token"})
-        }
-        else{
-            res.statusCode = 400
-            throw new Error("Invalid Token")
-        }
+        const payload = jwt.verify(token,process.env.JWT_SECRET_TEMP)
+        return res.json({message:"Token Verified Successfully"})
     }catch(err){
+        switch(err.name){
+            case 'JsonWebTokenError':
+                err.message = "Invalid Token"
+                break;
+            default:
+                err.message = "Session Expired"
+                break;
+        }
         next(err)
     }
 })
@@ -167,8 +186,12 @@ router.post('/reset',async(req,res,next)=>{
             throw new Error('Session Expired')
         }
         const token = req.headers.authorization.split(' ')[1]
-        const {id} = await jwt.verify(token,process.env.JWT_SECRET_TEMP)
+        const {id} = jwt.verify(token,process.env.JWT_SECRET_TEMP)
         const user = await userModel.findById(id)
+        if(user.token!=token){
+            res.statusCode = 403
+            throw new Error("session expired or Invalid token")
+        }
         if(!user){
             res.statusCode = 403
             throw new Error("Session Expired. Please try again!!")
@@ -190,14 +213,6 @@ router.get('/reset/:token',async(req,res,next)=>{
     catch(err){
         res.statusCode = 403
         err.message = 'Session Expired or invalid token'
-        next(err)
-    }
-})
-
-router.get('/dashboard',auth,async(req,res,next)=>{
-    try{
-        res.json({message:"Hello from backend"})
-    }catch(err){
         next(err)
     }
 })

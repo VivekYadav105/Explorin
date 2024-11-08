@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
 const userRouter = require("./router/user.router");
+const employeeRouter = require("./router/employee.router");
 const morgan = require("morgan");
 const dotenv = require('dotenv')
 const errorHandler = require('./middleware/error.middleware')
@@ -23,14 +24,19 @@ mongoose
     console.log(err);
   });
 
-app.use(morgan("dev"));
+  morgan.token('body', req => {
+    return JSON.stringify(req.body)
+  })
+
+app.use(morgan(":method :url :body"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cors());
 app.use("/user", userRouter);
+app.use('/employee',employeeRouter);
 
 app.get('/',(req,res)=>{
-  return res.send("Plunes task")
+  return res.send("Employex task")
 })
 
 app.use(errorHandler)

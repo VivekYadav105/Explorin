@@ -1,13 +1,12 @@
 const mongoose = require('mongoose')
 
 const userSchema = new mongoose.Schema({
-    userId:{type:String,required:true,unique:true},
-    mobile:{type:String,required:true,unique:true},
+    username:{type:String,required:true,unique:true},
+    email:{type:String,required:true,unique:true},
     password:{type:String,required:true},
-    fname:{type:String,required:true},
-    lname:{type:String,required:true},
-    otp:{type:String,length:6},
-    verfied:{type:Boolean,default:false}
+    profilePic:{type:String},
+    role:{type:String,required:true,default:'manager'},
+    token:{type:String}
 })
 
 const userModel = mongoose.model('user',userSchema)

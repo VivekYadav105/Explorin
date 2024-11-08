@@ -6,8 +6,7 @@ const auth = (req,res,next)=>{
             res.statusCode = 403
             throw new Error('user not authenticated')
         }
-        const secret = process.env.AUTH_SECRET
-        console.log(secret);
+        const secret = process.env.JWT_SECRET_MAIN
         
         const token = req.headers.authorization.split(' ')[1]
         const isValidToken = jwt.verify(token,secret||'',{complete:true});
@@ -23,10 +22,23 @@ const auth = (req,res,next)=>{
         if (err.name === 'JsonWebTokenError') {
             res.status(401).send({ message: 'Session expired, please log in again.' });
         } else {
+            res.statusCode = 403
             next(err);
         }
     }
 }
 
+const isManager = (req,res,next)=>{
+    try{
+        if(req.user.role=='manager') next()
+        else{
+            res.statusCode = 403
+            throw new Error("User is not manager");
+        }
+    }catch(err){
+        next(err)
+    }
+}
 
-module.exports = auth
+
+module.exports = {auth,isManager}
